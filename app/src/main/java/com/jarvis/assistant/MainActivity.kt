@@ -79,9 +79,6 @@ class MainActivity : AppCompatActivity() {
 
         settingsButton.setOnClickListener { showApiKeyDialog() }
 
-        if (getApiKey().isBlank()) {
-            statusText.text = "Set your Claude API key first (button below)."
-        }
     }
 
     private fun onHeard(text: String) {
