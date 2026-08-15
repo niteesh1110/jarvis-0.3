@@ -23,14 +23,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voiceManager: VoiceRecognitionManager
     private var commandProcessor: CommandProcessor? = null
     private var serviceRunning = false
-
-    private val requiredPermissions = arrayOf(
+private val requiredPermissions = arrayOf(
         android.Manifest.permission.RECORD_AUDIO,
         android.Manifest.permission.CALL_PHONE,
         android.Manifest.permission.SEND_SMS,
+        android.Manifest.permission.READ_CONTACTS,
         android.Manifest.permission.POST_NOTIFICATIONS
     )
-
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { /* results handled implicitly; features degrade gracefully without them */ }
