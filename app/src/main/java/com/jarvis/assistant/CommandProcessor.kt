@@ -52,7 +52,8 @@ class CommandProcessor(private val context: Context, @Suppress("UNUSED_PARAMETER
             text.contains("search ") -> actions.webSearch(text.substringAfter("search ").trim())
             text.contains("google ") -> actions.webSearch(text.substringAfter("google ").trim())
             text.contains("look up ") -> actions.webSearch(text.substringAfter("look up ").trim())
-
+text.contains("close") || text.contains("go home") || text.contains("exit") ->
+                actions.goHome()
             text.contains("open ") || text.contains("launch ") || text.contains("start ") -> {
                 val target = extractAfterAny(text, listOf("open ", "launch ", "start "))
                 if (target.isNotBlank()) actions.openApp(target)
