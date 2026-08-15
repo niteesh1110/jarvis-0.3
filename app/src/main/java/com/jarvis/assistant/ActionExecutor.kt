@@ -40,7 +40,7 @@ class ActionExecutor(private val context: Context) {
         }
     }
 
-  fun call(rawTarget: String): String {
+    fun call(rawTarget: String): String {
         // If it looks like a phone number already (mostly digits), dial it directly.
         val looksLikeNumber = rawTarget.count { it.isDigit() } >= 5
         val number = if (looksLikeNumber) rawTarget else resolveContactNumber(rawTarget)
@@ -174,6 +174,8 @@ class ActionExecutor(private val context: Context) {
         // A secure lock is set: we deliberately do NOT attempt to bypass it.
         return "Your phone has a PIN or biometric lock set, so you'll need to " +
                "authenticate that yourself — I can't bypass it, by design."
+    }
+
     /**
      * Android doesn't allow third-party apps to force-quit other apps —
      * that's blocked for the same reason lock-screen bypass is. The closest
