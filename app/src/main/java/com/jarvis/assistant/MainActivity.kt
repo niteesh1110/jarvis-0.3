@@ -2,11 +2,14 @@ package com.jarvis.assistant
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,13 +26,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voiceManager: VoiceRecognitionManager
     private var commandProcessor: CommandProcessor? = null
     private var serviceRunning = false
-private val requiredPermissions = arrayOf(
+    private var bubbleRunning = false
+
+    private val requiredPermissions = arrayOf(
         android.Manifest.permission.RECORD_AUDIO,
         android.Manifest.permission.CALL_PHONE,
         android.Manifest.permission.SEND_SMS,
         android.Manifest.permission.READ_CONTACTS,
         android.Manifest.permission.POST_NOTIFICATIONS
     )
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { /* results handled implicitly; features degrade gracefully without them */ }
@@ -42,6 +48,7 @@ private val requiredPermissions = arrayOf(
         conversationLog = findViewById(R.id.conversationLog)
         val micButton = findViewById<Button>(R.id.micButton)
         val serviceToggleButton = findViewById<Button>(R.id.serviceToggleButton)
+        val bubbleToggleButton = findViewById<Button>(R.id.bubbleToggleButton)
         val settingsButton = findViewById<Button>(R.id.settingsButton)
 
         requestNeededPermissions()
@@ -76,8 +83,33 @@ private val requiredPermissions = arrayOf(
             }
         }
 
-        settingsButton.setOnClickListener { showApiKeyDialog() }
+        bubbleToggleButton.setOnClickListener {
+            if (!bubbleRunning) {
+                // Need "Draw over other apps" permission first.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                    Toast.makeText(
+                        this,
+                        "Allow 'Display over other apps' for Jarvis, then tap this button again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")
+                    )
+                    startActivity(intent)
+                    return@setOnClickListener
+                }
+                startService(Intent(this, BubbleOverlayService::class.java))
+                bubbleRunning = true
+                bubbleToggleButton.text = "Disable Floating Bubble"
+            } else {
+                stopService(Intent(this, BubbleOverlayService::class.java))
+                bubbleRunning = false
+                bubbleToggleButton.text = "Enable Floating Bubble"
+            }
+        }
 
+        settingsButton.setOnClickListener { showApiKeyDialog() }
     }
 
     private fun onHeard(text: String) {
