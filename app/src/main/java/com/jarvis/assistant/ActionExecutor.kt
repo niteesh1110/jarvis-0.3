@@ -40,14 +40,46 @@ class ActionExecutor(private val context: Context) {
         }
     }
 
-    fun call(number: String): String {
+  fun call(rawTarget: String): String {
+        // If it looks like a phone number already (mostly digits), dial it directly.
+        val looksLikeNumber = rawTarget.count { it.isDigit() } >= 5
+        val number = if (looksLikeNumber) rawTarget else resolveContactNumber(rawTarget)
+
+        if (number == null) {
+            return "I couldn't find a contact named $rawTarget."
+        }
+
         return try {
             val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            "Calling $number."
+            if (looksLikeNumber) "Calling $number." else "Calling $rawTarget."
         } catch (e: SecurityException) {
             "I need call permission to do that."
+        }
+    }
+
+    /** Looks up a phone number from the phone's contacts by display name. */
+    private fun resolveContactNumber(name: String): String? {
+        val uri = android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        val projection = arrayOf(
+            android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+        )
+        val selection = "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?"
+        val selectionArgs = arrayOf("%$name%")
+
+        return try {
+            context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val numberIndex = cursor.getColumnIndex(
+                        android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+                    )
+                    cursor.getString(numberIndex)
+                } else null
+            }
+        } catch (e: SecurityException) {
+            null
         }
     }
 
