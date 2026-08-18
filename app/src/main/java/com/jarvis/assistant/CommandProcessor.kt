@@ -4,20 +4,24 @@ import android.app.Activity
 import android.content.Context
 
 /**
- * 100% FREE, LOCAL command processor. No API calls, no billing, no
- * internet required. Uses broad keyword matching (not exact phrases) so
- * natural speech like "turn on the flash" or "can you open camera" works,
- * not just rigid patterns.
+ * Hybrid processor: fixed device actions run 100% locally and free (open
+ * app, call, flashlight, etc). Anything that doesn't match a known
+ * command pattern falls through to Gemini's free tier for real
+ * conversation, memory of the chat, and suggestions.
  */
-class CommandProcessor(private val context: Context, @Suppress("UNUSED_PARAMETER") apiKey: String) {
+class CommandProcessor(private val context: Context, private val apiKey: String) {
 
     private val actions = ActionExecutor(context)
+    private val gemini = GeminiApiClient(apiKey)
+
+    private val conversationHistory = mutableListOf<Pair<String, String>>()
+    private val maxHistoryTurns = 20
 
     suspend fun handle(userText: String, activity: Activity?): String {
         val text = userText.trim().lowercase()
         val isOff = Regex("""\boff\b""").containsMatchIn(text)
 
-        return when {
+        val localResult: String? = when {
             text.contains("flash") || text.contains("torch") ->
                 actions.setFlashlight(!isOff)
 
@@ -26,16 +30,14 @@ class CommandProcessor(private val context: Context, @Suppress("UNUSED_PARAMETER
 
             text.contains("volume") || text.contains("loud") -> {
                 val number = Regex("""\d+""").find(text)?.value?.toIntOrNull()
-                if (number != null) actions.setVolume(number)
-                else "Say a number, like: set volume to 50."
+                if (number != null) actions.setVolume(number) else null
             }
 
             text.contains("unlock") -> actions.requestUnlock(activity)
 
             text.contains("call ") || text.contains("dial ") || text.contains("phone ") -> {
                 val target = extractAfterAny(text, listOf("call ", "dial ", "phone "))
-                if (target.isNotBlank()) actions.call(target)
-                else "Who do you want to call?"
+                if (target.isNotBlank()) actions.call(target) else null
             }
 
             text.contains("text ") || text.contains("message ") || text.contains("sms ") -> {
@@ -43,13 +45,10 @@ class CommandProcessor(private val context: Context, @Suppress("UNUSED_PARAMETER
                 val parts = after.split(" saying ", limit = 2)
                 if (parts.size == 2 && parts[0].isNotBlank()) {
                     actions.sendSms(parts[0].trim(), parts[1].trim())
-                } else {
-                    "Say it like: text 9876543210 saying I'm on my way."
-                }
+                } else null
             }
 
             text.contains("search for ") -> actions.webSearch(text.substringAfter("search for ").trim())
-            text.contains("search ") -> actions.webSearch(text.substringAfter("search ").trim())
             text.contains("google ") -> actions.webSearch(text.substringAfter("google ").trim())
             text.contains("look up ") -> actions.webSearch(text.substringAfter("look up ").trim())
 
@@ -58,12 +57,30 @@ class CommandProcessor(private val context: Context, @Suppress("UNUSED_PARAMETER
 
             text.contains("open ") || text.contains("launch ") || text.contains("start ") -> {
                 val target = extractAfterAny(text, listOf("open ", "launch ", "start "))
-                if (target.isNotBlank()) actions.openApp(target)
-                else "Which app do you want to open?"
+                if (target.isNotBlank()) actions.openApp(target) else null
             }
 
-            else -> "I didn't understand that. Try: turn on flash, open camera, call mom, " +
-                    "text 9876543210 saying hello, search for pizza near me, or unlock."
+            else -> null
+        }
+
+        if (localResult != null) return localResult
+
+        if (apiKey.isBlank()) {
+            return "I didn't understand that as a command, and no Gemini key is set for " +
+                    "conversation. Try a command like open camera or flashlight on, or add " +
+                    "a free Gemini key in settings."
+        }
+
+        return try {
+            val reply = gemini.chat(conversationHistory.toList(), userText)
+            conversationHistory.add("user" to userText)
+            conversationHistory.add("model" to reply)
+            while (conversationHistory.size > maxHistoryTurns * 2) {
+                conversationHistory.removeAt(0)
+            }
+            reply
+        } catch (e: Exception) {
+            "Sorry, I couldn't reach my brain just now."
         }
     }
 
