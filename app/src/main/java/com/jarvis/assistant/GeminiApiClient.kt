@@ -24,7 +24,7 @@ class GeminiApiClient(private val apiKey: String) {
         .build()
 
     companion object {
-        private const val MODEL = "gemini-2.5-flash"
+        private const val MODEL = "gemini-flash-latest"
         private const val ENDPOINT =
             "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
         private const val SYSTEM_PROMPT =
