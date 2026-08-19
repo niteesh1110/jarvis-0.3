@@ -1,13 +1,17 @@
 package com.jarvis.assistant
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
+import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private var commandProcessor: CommandProcessor? = null
     private var serviceRunning = false
     private var bubbleRunning = false
+    private var thinkingAnimators: List<ObjectAnimator> = emptyList()
 
     private val requiredPermissions = arrayOf(
         android.Manifest.permission.RECORD_AUDIO,
@@ -85,7 +90,6 @@ class MainActivity : AppCompatActivity() {
 
         bubbleToggleButton.setOnClickListener {
             if (!bubbleRunning) {
-                // Need "Draw over other apps" permission first.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                     Toast.makeText(
                         this,
@@ -115,12 +119,38 @@ class MainActivity : AppCompatActivity() {
     private fun onHeard(text: String) {
         appendLog("You: $text")
         statusText.text = "Thinking..."
+        startThinkingAnimation()
         CoroutineScope(Dispatchers.Main).launch {
             val reply = commandProcessor?.handle(text, this@MainActivity) ?: "Sorry, something went wrong."
             appendLog("Jarvis: $reply")
             statusText.text = "Idle"
+            stopThinkingAnimation()
             voiceManager.speak(reply)
         }
+    }
+
+    private fun startThinkingAnimation() {
+        val indicator = findViewById<LinearLayout>(R.id.thinkingIndicator)
+        indicator.visibility = View.VISIBLE
+        val bars = listOf(R.id.bar1, R.id.bar2, R.id.bar3, R.id.bar4, R.id.bar5)
+            .map { findViewById<View>(it) }
+
+        thinkingAnimators = bars.mapIndexed { index, bar ->
+            ObjectAnimator.ofFloat(bar, "scaleY", 0.4f, 1.8f).apply {
+                duration = 400
+                startDelay = index * 90L
+                repeatMode = ObjectAnimator.REVERSE
+                repeatCount = ObjectAnimator.INFINITE
+                interpolator = LinearInterpolator()
+                start()
+            }
+        }
+    }
+
+    private fun stopThinkingAnimation() {
+        thinkingAnimators.forEach { it.cancel() }
+        thinkingAnimators = emptyList()
+        findViewById<LinearLayout>(R.id.thinkingIndicator).visibility = View.GONE
     }
 
     private fun appendLog(line: String) {
