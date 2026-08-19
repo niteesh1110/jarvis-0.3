@@ -15,6 +15,51 @@
         android:textSize="16sp"
         android:paddingBottom="12dp" />
 
+    <LinearLayout
+        android:id="@+id/thinkingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="24dp"
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        android:visibility="gone"
+        android:paddingBottom="12dp">
+
+        <View
+            android:id="@+id/bar1"
+            android:layout_width="4dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="4dp"
+            android:background="#00E5FF" />
+
+        <View
+            android:id="@+id/bar2"
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="4dp"
+            android:background="#00E5FF" />
+
+        <View
+            android:id="@+id/bar3"
+            android:layout_width="4dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="4dp"
+            android:background="#00E5FF" />
+
+        <View
+            android:id="@+id/bar4"
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="4dp"
+            android:background="#00E5FF" />
+
+        <View
+            android:id="@+id/bar5"
+            android:layout_width="4dp"
+            android:layout_height="8dp"
+            android:background="#00E5FF" />
+
+    </LinearLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
